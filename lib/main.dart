@@ -47,39 +47,62 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+  String _counter = 'Waiting Connection';
 
-  void _incrementCounter() {
+
+  void _incrementCounter(IO.Socket socket) {
     print('Inside incremetn counter');
-    initSocket();
+//    initSocket();
+
     setState(() {
       // This call to setState tells the Flutter framework that something has
       // changed in this State, which causes it to rerun the build method below
       // so that the display can reflect the updated values. If we changed
       // _counter without calling setState(), then the build method would not be
       // called again, and so nothing would appear to happen.
-      _counter++;
+//      _counter++;
     });
   }
 
   void initSocket() {
-    print('Inside init Socket');
+    print('initiating Socket....');
+    setState(() {
+      _counter = 'Connecting...';
+    });
+
     IO.Socket socket = IO.io('http://172.25.1.206:6001', <String, dynamic>{'transports': ['websocket']});
 
     Echo echo = new Echo({
       'broadcaster': 'socket.io',
       'client': socket,
     });
-    socket.on('connect', (_) => print('connected'));
+
+    socket.on('connect', (_) => setState((){
+      _counter = 'Connected';
+      print('connected');
+
+      socket.emit('public', 'check');
+      socket.emit('MessageSent', 'check');
+      socket.send(['data']);
+
+      echo.socket.emit('message', 'your message here');
+      print('after emit');
+    }));
     
     echo.channel('public').listen('MessageSent', (e) {
       print('Listening: \n');
       print(e);
     });
+  }
 
-    socket.emit('MessageSent', ['check']);
+  void emitMsg() {
+//    socket.emit('MessageSent', 'check');
+//    socket.send(['data']);
+    print('after emit');
+  }
 
-//    socket.on('disconnect', (_) => print('disconnect'));
+  void disconnectSocket(IO.Socket socket){
+    socket.on('disconnect', (_) => print('disconnect'));
   }
 
 
@@ -124,11 +147,18 @@ class _MyHomePageState extends State<MyHomePage> {
               '$_counter',
               style: Theme.of(context).textTheme.display1,
             ),
+            RaisedButton(
+              color: Theme
+                  .of(context)
+                  .buttonColor,
+              child: Text('Emit'),
+              onPressed: () => {},
+            ),
           ],
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
+        onPressed: () => initSocket(),
         tooltip: 'Increment',
         child: Icon(Icons.add),
       ), // This trailing comma makes auto-formatting nicer for build methods.
